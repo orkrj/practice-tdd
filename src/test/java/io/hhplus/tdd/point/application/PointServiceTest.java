@@ -164,4 +164,78 @@ class PointServiceTest {
       assertThat(histories.get(1).amount()).isEqualTo(secondChargeAmounts);
     }
   }
+
+  @Nested
+  @DisplayName("특정 유저의 포인트를 사용하는 기능")
+  class usePoints {
+
+    @Test
+    @DisplayName("유저 포인트를 사용할 때 사용 금액이 0원 이하인 경우 예외가 발생한다.")
+    void givenZeroOrNegativeAmount_whenUsePoints_thenThrowRuntimeException() {
+      // given
+      long userId = 1L;
+      long invalidAmount = 0L;
+
+      // when & then
+      assertThatThrownBy(() -> sut.usePoints(userId, invalidAmount))
+          .isInstanceOf(RuntimeException.class)
+          .hasMessageContaining("사용 금액은 0보다 커야 합니다.");
+    }
+
+    @Test
+    @DisplayName("유저 포인트를 사용할 때 현재 포인트보다 사용 금액이 큰 경우 예외가 발생한다.")
+    void givenAmountGreaterThanCurrentPoints_whenUsePoints_thenThrowRuntimeException() {
+      // given
+      long userId = 1L;
+      long currentPoints = 1000L;
+      long userAmount = 2000L;
+
+      userPointTable.insertOrUpdate(userId, currentPoints);
+
+      // when & then
+      assertThatThrownBy(() -> sut.usePoints(userId, userAmount))
+          .isInstanceOf(RuntimeException.class)
+          .hasMessageContaining("포인트가 부족합니다.");
+    }
+
+    @Test
+    @DisplayName("정상 금액으로 유저 포인트를 사용하면 기존의 포인트에서 사용 금액이 차감된다.")
+    void givenValidAmount_whenUsePoints_thenUpdateUserPoint() {
+      // given
+      long userId = 1L;
+      long currentPoints = 10000L;
+      long useAmounts = 4000L;
+
+      userPointTable.insertOrUpdate(userId, currentPoints);
+
+      // when
+      var updatedUserPoints = sut.usePoints(userId, useAmounts);
+
+      // then
+      assertThat(updatedUserPoints).isNotNull();
+      assertThat(updatedUserPoints.point()).isEqualTo(currentPoints - useAmounts);
+    }
+
+    @Test
+    @DisplayName("유저 포인트를 사용하면 포인트 사용 내역이 기록된다.")
+    void givenValidAmount_whenUsePoints_thenRecordPointHistory() {
+      // given
+      long userId = 1L;
+      long firstUseAmounts = 1000L;
+      long secondUseAmounts = 2000L;
+
+      sut.chargePoints(userId, 5000L);
+
+      sut.usePoints(userId, firstUseAmounts);
+      sut.usePoints(userId, secondUseAmounts);
+
+      // when
+      var histories = sut.getUserPointHistories(userId);
+
+      // then
+      assertThat(histories).hasSize(3);
+      assertThat(histories.get(1).amount()).isEqualTo(-firstUseAmounts);
+      assertThat(histories.get(2).amount()).isEqualTo(-secondUseAmounts);
+    }
+  }
 }
