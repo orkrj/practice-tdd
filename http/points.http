@@ -1,0 +1,2 @@
+### 특정 유저 포인트 조회
+GET localhost:8080/point/1
