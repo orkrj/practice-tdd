@@ -38,6 +38,23 @@ public class PointService {
     }
   }
 
+  public UserPoint usePoints(long id, long amount) {
+    long positiveAmount = this.checkAmountIsPositive(amount, TransactionType.USE);
+
+    long currentPoints = this.userPoint.selectById(id).point();
+    this.validateSufficientPoints(currentPoints, amount);
+    long updatedPoints = currentPoints - positiveAmount;
+
+    try{
+      UserPoint updatedUserPoints = this.userPoint.insertOrUpdate(id, updatedPoints);
+      this.pointHistory.insert(id, -amount, TransactionType.USE, System.currentTimeMillis());
+      return updatedUserPoints;
+
+    } catch (Exception e){
+      throw new RuntimeException("포인트 사용 중 오류가 발생했습니다.", e);
+    }
+  }
+
   // -------------------
   private long checkAmountIsPositive(long amount, TransactionType transactionType) {
     String type;
@@ -52,5 +69,11 @@ public class PointService {
     }
 
     return amount;
+  }
+
+  private void validateSufficientPoints(long currentPoints, long amount) {
+    if (currentPoints < amount) {
+      throw new IllegalArgumentException("포인트가 부족합니다.");
+    }
   }
 }
