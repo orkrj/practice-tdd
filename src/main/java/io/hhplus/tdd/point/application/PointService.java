@@ -25,12 +25,12 @@ public class PointService {
   }
 
   public UserPoint chargePoints(long userId, long amount) {
-    long checkedAmount = this.checkChargeAmount(amount);
+    long positiveAmount = this.checkAmountIsPositive(amount, TransactionType.CHARGE);
 
     try{
       long currentPoints = this.userPoint.selectById(userId).point();
-      UserPoint chargedUserPoints = this.userPoint.insertOrUpdate(userId, currentPoints + checkedAmount);
-      this.pointHistory.insert(userId, checkedAmount, TransactionType.CHARGE, System.currentTimeMillis());
+      UserPoint chargedUserPoints = this.userPoint.insertOrUpdate(userId, currentPoints + positiveAmount);
+      this.pointHistory.insert(userId, positiveAmount, TransactionType.CHARGE, System.currentTimeMillis());
       return chargedUserPoints;
 
     } catch (Exception e){
@@ -39,9 +39,16 @@ public class PointService {
   }
 
   // -------------------
-  private long checkChargeAmount(long amount) {
+  private long checkAmountIsPositive(long amount, TransactionType transactionType) {
+    String type;
+    switch (transactionType) {
+      case CHARGE -> type = "충전";
+      case USE -> type = "사용";
+      default -> throw new IllegalArgumentException("충전 및 사용이 불가능한 유형입니다.");
+    }
+
     if (amount <= 0) {
-      throw new IllegalArgumentException("충전 금액은 0원보다 커야 합니다.");
+      throw new IllegalArgumentException(type + " 금액은 0보다 커야 합니다.");
     }
 
     return amount;
