@@ -28,6 +28,7 @@ class PointServiceTest {
   @AfterEach
   void clean() {
     userPointTable = new UserPointTable();
+    pointHistoryTable = new PointHistoryTable();
   }
 
   @Nested
@@ -112,6 +113,60 @@ class PointServiceTest {
       assertThat(histories).hasSize(2);
       assertThat(histories.get(0).amount()).isEqualTo(1000L);
       assertThat(histories.get(1).amount()).isEqualTo(-500L);
+    }
+  }
+
+  @Nested
+  @DisplayName("특정 유저의 포인트를 충전하는 기능")
+  class chargePoints {
+
+    @Test
+    @DisplayName("유저 포인트를 충전할 때 충전 금액이 0 이하인 경우 예외가 발생한다.")
+    void givenZeroOrNegativeAmount_whenChargePoints_thenThrowRuntimeException() {
+      // given
+      long userId = 1L;
+      long invalidAmount = 0L;
+
+      // when & then
+      assertThatThrownBy(() -> sut.chargePoints(userId, invalidAmount)).isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    @DisplayName("정상 금액으로 유저 포인트를 충전하면 기존의 포인트에 충전 금액이 더해진다.")
+    void givenValidAmount_whenChargePoints_thenUpdateUserPoint() {
+      // given
+      long userId = 1L;
+      long currentPoints = 1000L;
+      long chargeAmounts = 4000L;
+
+      userPointTable.insertOrUpdate(userId, currentPoints);
+
+      // when
+      var chargedUserPoints = sut.chargePoints(userId, chargeAmounts);
+
+      // then
+      assertThat(chargedUserPoints).isNotNull();
+      assertThat(chargedUserPoints.point()).isEqualTo(currentPoints + chargeAmounts);
+    }
+
+    @Test
+    @DisplayName("유저 포인트를 충전하면 포인트 충전 내역이 기록된다.")
+    void givenValidAmount_whenChargePoints_thenRecordPointHistory() {
+      // given
+      long userId = 1L;
+      long firstChargeAmounts = 1000L;
+      long secondChargeAmounts = 2000L;
+
+      sut.chargePoints(userId, firstChargeAmounts);
+      sut.chargePoints(userId, secondChargeAmounts);
+
+      // when
+      var histories = sut.getUserPointHistories(userId);
+
+      // then
+      assertThat(histories).hasSize(2);
+      assertThat(histories.get(0).amount()).isEqualTo(firstChargeAmounts);
+      assertThat(histories.get(1).amount()).isEqualTo(secondChargeAmounts);
     }
   }
 }
