@@ -121,7 +121,9 @@ class PointServiceTest {
       long invalidAmount = 0L;
 
       // when & then
-      assertThatThrownBy(() -> sut.chargePoints(userId, invalidAmount)).isInstanceOf(RuntimeException.class);
+      assertThatThrownBy(() -> sut.chargePoints(userId, invalidAmount))
+          .isInstanceOf(RuntimeException.class)
+          .hasMessage("충전 금액은 0보다 커야 합니다.");
     }
 
     @Test
