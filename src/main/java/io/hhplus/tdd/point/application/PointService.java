@@ -74,6 +74,10 @@ public class PointService {
       return updatedUserPoints;
 
     } catch (Exception e){
+      if (e instanceof IllegalArgumentException) {
+        throw e;
+      }
+
       throw new RuntimeException("포인트 사용 중 오류가 발생했습니다.", e);
 
     } finally{
