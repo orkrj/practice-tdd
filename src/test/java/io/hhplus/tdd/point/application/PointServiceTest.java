@@ -6,7 +6,6 @@ import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.database.UserPointTable;
 import io.hhplus.tdd.point.domain.TransactionType;
 import io.hhplus.tdd.point.domain.UserPoint;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -23,12 +22,6 @@ class PointServiceTest {
     userPointTable = new UserPointTable();
     pointHistoryTable = new PointHistoryTable();
     sut = new PointService(userPointTable, pointHistoryTable);
-  }
-
-  @AfterEach
-  void clean() {
-    userPointTable = new UserPointTable();
-    pointHistoryTable = new PointHistoryTable();
   }
 
   @Nested
