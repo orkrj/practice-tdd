@@ -1,7 +1,6 @@
 package io.hhplus.tdd.point.application;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
 
 import io.hhplus.tdd.database.UserPointTable;
 import io.hhplus.tdd.point.domain.UserPoint;
@@ -38,7 +37,7 @@ class PointServiceTest {
       long userId = 1L;
 
       // when
-      UserPoint userPoint = sut.getUserPoint(userId);
+      UserPoint userPoint = sut.getUserPoints(userId);
 
       // then
       assertThat(userPoint).isNotNull();
@@ -54,7 +53,7 @@ class PointServiceTest {
       userPointTable.insertOrUpdate(userId, 100L);
 
       // when
-      UserPoint userPoint = sut.getUserPoint(userId);
+      UserPoint userPoint = sut.getUserPoints(userId);
 
       // then
       assertThat(userPoint).isNotNull();

@@ -13,7 +13,7 @@ public class PointService {
   private final UserPointTable userPoint;
   private final PointHistoryTable pointHistory;
 
-  public UserPoint getUserPoint(long userId) {
+  public UserPoint getUserPoints(long userId) {
     return this.userPoint.selectById(userId);
   }
 }
