@@ -6,6 +6,8 @@ import io.hhplus.tdd.point.domain.PointHistory;
 import io.hhplus.tdd.point.domain.TransactionType;
 import io.hhplus.tdd.point.domain.UserPoint;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +17,8 @@ public class PointService {
 
   private final UserPointTable userPoint;
   private final PointHistoryTable pointHistory;
+
+  private final ConcurrentHashMap<Long, ReentrantLock> userLock = new ConcurrentHashMap<>();
 
   public UserPoint getUserPoints(long userId) {
     return this.userPoint.selectById(userId);
@@ -27,6 +31,9 @@ public class PointService {
   public UserPoint chargePoints(long userId, long amount) {
     long positiveAmount = this.checkAmountIsPositive(amount, TransactionType.CHARGE);
 
+    ReentrantLock lock = this.getUserLock(userId);
+    lock.lock();
+
     try{
       long currentPoints = this.userPoint.selectById(userId).point();
       UserPoint chargedUserPoints = this.userPoint.insertOrUpdate(userId, currentPoints + positiveAmount);
@@ -35,27 +42,60 @@ public class PointService {
 
     } catch (Exception e){
       throw new RuntimeException("포인트 충전 중 오류가 발생했습니다.", e);
+
+    } finally{
+      lock.unlock();
+
+      if (lock.tryLock()) {
+        try {
+          if (!lock.hasQueuedThreads()) {
+            userLock.remove(userId, lock);
+          }
+        } finally{
+          lock.unlock();
+        }
+      }
     }
   }
 
-  public UserPoint usePoints(long id, long amount) {
+  public UserPoint usePoints(long userId, long amount) {
     long positiveAmount = this.checkAmountIsPositive(amount, TransactionType.USE);
 
-    long currentPoints = this.userPoint.selectById(id).point();
-    this.validateSufficientPoints(currentPoints, amount);
-    long updatedPoints = currentPoints - positiveAmount;
+    ReentrantLock lock = this.getUserLock(userId);
+    lock.lock();
 
     try{
-      UserPoint updatedUserPoints = this.userPoint.insertOrUpdate(id, updatedPoints);
-      this.pointHistory.insert(id, -amount, TransactionType.USE, System.currentTimeMillis());
+      long currentPoints = this.userPoint.selectById(userId).point();
+      this.validateSufficientPoints(currentPoints, amount);
+      long updatedPoints = currentPoints - positiveAmount;
+
+      UserPoint updatedUserPoints = this.userPoint.insertOrUpdate(userId, updatedPoints);
+      this.pointHistory.insert(userId, -amount, TransactionType.USE, System.currentTimeMillis());
       return updatedUserPoints;
 
     } catch (Exception e){
+      if (e instanceof IllegalArgumentException) {
+        throw e;
+      }
+
       throw new RuntimeException("포인트 사용 중 오류가 발생했습니다.", e);
+
+    } finally{
+      lock.unlock();
+
+      if (lock.tryLock()) {
+        try {
+          if (!lock.hasQueuedThreads()) {
+            userLock.remove(userId, lock);
+          }
+        } finally{
+          lock.unlock();
+        }
+      }
     }
   }
 
-  // -------------------
+  // ------------------- private methods -------------------
   private long checkAmountIsPositive(long amount, TransactionType transactionType) {
     String type;
     switch (transactionType) {
@@ -75,5 +115,9 @@ public class PointService {
     if (currentPoints < amount) {
       throw new IllegalArgumentException("포인트가 부족합니다.");
     }
+  }
+
+  private ReentrantLock getUserLock(long userId) {
+    return userLock.computeIfAbsent(userId, id -> new ReentrantLock());
   }
 }
