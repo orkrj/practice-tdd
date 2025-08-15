@@ -3,3 +3,9 @@ GET localhost:8080/point/1
 
 ### 특정 유저 포인트 충전/이용 내역 조회
 GET localhost:8080/point/1/histories
+
+### 특정 유저 포인트 충전
+PATCH localhost:8080/point/1/charge
+content-type: application/json
+
+1000
